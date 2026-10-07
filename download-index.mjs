@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 
 const PAGE_URL = 'https://artificialanalysis.ai/#intelligence';
@@ -7,7 +7,33 @@ const OUTPUT = 'intelligence-index.png';
 // User-provided XPath for the Artificial Analysis "Download Image" button.
 const DOWNLOAD_BUTTON_XPATH = '/html/body/main/div[2]/div[2]/div/div/section[1]/div[2]/div[1]/div[1]/div[1]/div[2]/div[1]/button[2]';
 
-const browser = await chromium.launch({ headless: true });
+function findSystemChrome() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/opt/google/chrome/google-chrome',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    'Google Chrome was not found. This workflow expects the preinstalled Chrome on the GitHub Ubuntu runner.'
+  );
+}
+
+const chromePath = findSystemChrome();
+console.log(`Using system Chrome: ${chromePath}`);
+
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: chromePath,
+});
+
 const context = await browser.newContext({
   acceptDownloads: true,
   viewport: { width: 1600, height: 1200 },
