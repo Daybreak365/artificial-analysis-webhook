@@ -1,0 +1,95 @@
+name: Artificial Analysis Intelligence Index Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Check every 3 hours. Discord is only notified when the downloaded
+    # Intelligence Index image is actually different from the previous one.
+    - cron: '17 */3 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: artificial-analysis-index-watch
+  cancel-in-progress: false
+
+jobs:
+  check-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Download Artificial Analysis image
+        run: node download-index.mjs
+
+      - name: Compare with previous image
+        id: compare
+        run: node compare-image.mjs
+
+      - name: Send changed image to Discord
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          DATE="$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST')"
+
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL secret is missing."
+            exit 1
+          fi
+
+          PAYLOAD="$(printf '{"content":"📊 **Artificial Analysis Intelligence Index 업데이트 감지**\\n확인 시각: %s\\nhttps://artificialanalysis.ai/#intelligence","allowed_mentions":{"parse":[]}}' "$DATE")"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            -X POST \
+            -F "payload_json=$PAYLOAD" \
+            -F "files[0]=@intelligence-index.png" \
+            "${DISCORD_WEBHOOK_URL}?wait=true"
+
+      - name: Save new image fingerprint
+        if: steps.compare.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .state/last-image.sha256
+
+          if git diff --cached --quiet; then
+            echo "No state change to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: update Intelligence Index fingerprint [skip ci]"
+          git push
+
+      - name: No update detected
+        if: steps.compare.outputs.changed != 'true'
+        run: echo "No Intelligence Index update detected; Discord webhook skipped."
+
+      - name: Upload debug screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artificial-analysis-debug
+          path: debug-page.png
+          if-no-files-found: ignore
+          retention-days: 7

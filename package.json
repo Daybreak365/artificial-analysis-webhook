@@ -1,0 +1,15 @@
+{
+  "name": "aa-index-discord",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Watch the Artificial Analysis Intelligence Index and post its official downloaded image to Discord only when it changes.",
+  "type": "module",
+  "scripts": {
+    "download": "node download-index.mjs",
+    "compare": "node compare-image.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0",
+    "sharp": "^0.34.4"
+  }
+}
