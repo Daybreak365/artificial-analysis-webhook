@@ -55,7 +55,7 @@ jobs:
             exit 1
           fi
 
-          PAYLOAD="$(printf '{"content":"📊 **Artificial Analysis Intelligence Index 업데이트 감지**\\n확인 시각: %s\\nhttps://artificialanalysis.ai/#intelligence","allowed_mentions":{"parse":[]}}' "$DATE")"
+          PAYLOAD="$(printf '{"content":"🐈 **Intelligence Index** 업데이트됨\\n확인 시각: %s","allowed_mentions":{"parse":[]}}' "$DATE")"
 
           curl \
             --fail \
