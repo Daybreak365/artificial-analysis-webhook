@@ -16,7 +16,9 @@ concurrency:
 
 jobs:
   check-index:
-    runs-on: ubuntu-latest
+    # GitHub's Ubuntu runner already includes Google Chrome, so we reuse it
+    # instead of downloading Playwright Chromium on every run.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     steps:
@@ -31,10 +33,17 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --omit=dev --no-audit --no-fund
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Verify preinstalled Chrome
+        run: |
+          CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -z "$CHROME_PATH" ]; then
+            echo "Preinstalled Google Chrome was not found on this runner."
+            exit 1
+          fi
+          echo "Using Chrome: $CHROME_PATH"
+          "$CHROME_PATH" --version
 
       - name: Download Artificial Analysis image
         run: node download-index.mjs
