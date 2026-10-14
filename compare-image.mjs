@@ -64,9 +64,9 @@ fs.mkdirSync(STATE_DIR, { recursive: true });
 const tempReference = path.join(STATE_DIR, 'current-image-reference.png');
 await normalizeToPng(IMAGE_PATH, tempReference);
 
-// Migration from the old exact-pixel SHA scheme.
-// Establish a visual baseline silently so this code change itself does not
-// trigger a duplicate Discord post.
+// If the visual baseline is missing, treat the current chart as a change once.
+// This both repairs/migrates old state and ensures the current chart is posted
+// instead of silently establishing a baseline forever.
 if (!fs.existsSync(REFERENCE_PATH)) {
   fs.renameSync(tempReference, REFERENCE_PATH);
 
@@ -74,8 +74,8 @@ if (!fs.existsSync(REFERENCE_PATH)) {
     fs.unlinkSync(LEGACY_HASH_PATH);
   }
 
-  console.log('Visual comparison baseline created. Discord notification skipped for migration.');
-  setOutput('changed', 'false');
+  console.log('Visual comparison baseline created. Current chart will be posted once.');
+  setOutput('changed', 'true');
   setOutput('state_updated', 'true');
   setOutput('reason', 'baseline_created');
   process.exit(0);
